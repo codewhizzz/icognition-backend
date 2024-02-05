@@ -1,0 +1,90 @@
+name: CI/CD Pipeline for FastAPI Application
+
+on:
+  push:
+    branches:
+      - main  # Trigger deployment to production on pushes to 'main'
+      - develop  # Trigger deployment to staging on pushes to 'develop'
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        python-version: ['3.7', '3.8', '3.9']  # Testing against multiple Python versions
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Python ${{ matrix.python-version }}
+        uses: actions/setup-python@v2
+        with:
+          python-version: ${{ matrix.python-version }}
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Run tests
+        run: |
+          pytest
+
+  deploy:
+    needs: test  # Only proceed with deployment if tests pass
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
+    steps:
+      - uses: actions/checkout@v2
+      
+      - name: Set up Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.8'  # Define the Python version for deployment
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Authenticate with Google Cloud (Staging)
+        if: github.ref == 'refs/heads/develop'
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY_STG }}
+          project_id: ${{ secrets.stage-413302 }}
+      
+      - name: Authenticate with Google Cloud (Production)
+        if: github.ref == 'refs/heads/main'
+        uses: google-github-actions/setup-gcloud@v0
+        with:
+          service_account_key: ${{ secrets.GCP_SA_KEY_PROD }}
+          project_id: ${{ secrets.micro-harmony-413302 }}
+      
+      - name: Configure gcloud CLI (Staging)
+        if: github.ref == 'refs/heads/develop'
+        run: gcloud config set project ${{ secrets.stage-413302 }}
+      
+      - name: Configure gcloud CLI (Production)
+        if: github.ref == 'refs/heads/main'
+        run: gcloud config set project ${{ secrets.micro-harmony-413302 }}
+      
+      - name: Deploy to Google App Engine (Staging)
+        if: github.ref == 'refs/heads/develop'
+        run: gcloud app deploy app.yaml --quiet
+      
+      - name: Deploy to Google App Engine (Production)
+        if: github.ref == 'refs/heads/main'
+        run: gcloud app deploy app.yaml --quiet
+      
+      - name: Run Alembic migrations (Staging)
+        if: github.ref == 'refs/heads/develop'
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+      
+      - name: Run Alembic migrations (Production)
+        if: github.ref == 'refs/heads/main'
+        run: alembic upgrade head
+        env:
+          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
+
