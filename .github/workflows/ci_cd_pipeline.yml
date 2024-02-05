@@ -11,7 +11,9 @@ jobs:
     runs-on: ubuntu-latest
     strategy:
       matrix:
-        python-version: ['3.8', '3.9', '3.10']  # Update Python versions to 3.8 and above
+        python-version: ['3.10']  # Only use Python versions compatible with ipython==8.20.0
+    # ... rest of your workflow
+
 
     steps:
       - uses: actions/checkout@v3
