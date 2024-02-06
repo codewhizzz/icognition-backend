@@ -6,8 +6,7 @@ from app.models import Bookmark, Entity, Concept, Page, Document
 from app.together_api_client import InclusiveTemplate, TogetherMixtralClient
 from sqlalchemy import select, delete, create_engine, and_, Integer, String, func
 from sqlalchemy.orm import Session
-from dotenv import dotenv_values
-
+import os  # Import os to use os.getenv()
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -16,13 +15,12 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-config = dotenv_values(".env")
-
-engine = create_engine(config["LOCAL_PSQL"], client_encoding="utf8")
+# Use DATABASE_URL if LOCAL_PSQL isn't set. Adjust this line to use os.getenv()
+database_url = os.getenv('LOCAL_PSQL', default=os.getenv('DATABASE_URL'))
+engine = create_engine(database_url, client_encoding='utf8')  # Updated line to use database_url
 
 mixtralClient = TogetherMixtralClient()
 inclusiveTemplate = InclusiveTemplate()
-
 
 def delete_bookmark_and_associate_records(bookmark_id) -> None:
     """
