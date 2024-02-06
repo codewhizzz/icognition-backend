@@ -14,91 +14,72 @@ jobs:
         python-version: ['3.10']  # Only use Python versions compatible with ipython==8.20.0
     steps:
       - uses: actions/checkout@v3
-      
       - name: Set up Python ${{ matrix.python-version }}
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-      
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      # Dynamically set DATABASE_URL for tests based on the branch
       - name: Set DATABASE_URL for testing (staging)
         if: github.ref == 'refs/heads/develop'
         run: echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
-
       - name: Set DATABASE_URL for testing (production)
         if: github.ref == 'refs/heads/main'
         run: echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_ENV
-
       - name: Run tests
         run: pytest
 
   deploy:
-    needs: test  # Only proceed with deployment if tests pass
+    needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main' || github.ref == 'refs/heads/develop'
     steps:
       - uses: actions/checkout@v3
-      
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.8'  # Define the Python version for deployment
-      
+          python-version: '3.8'
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-
-      # Set ENVIRONMENT variable based on the branch
       - name: Set environment for staging
         if: github.ref == 'refs/heads/develop'
         run: echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-
       - name: Set environment for production
         if: github.ref == 'refs/heads/main'
         run: echo "ENVIRONMENT=production" >> $GITHUB_ENV
-
       - name: Authenticate with Google Cloud (Production)
         if: github.ref == 'refs/heads/main'
         uses: google-github-actions/setup-gcloud@v0
         with:
           service_account_key: ${{ secrets.GCP_SA_KEY_PROD }}
-          project_id: micro-harmony-413302 # Adjusted for consistency
-      
+          project_id: micro-harmony-413302
       - name: Authenticate with Google Cloud (Staging)
         if: github.ref == 'refs/heads/develop'
         uses: google-github-actions/setup-gcloud@v0
         with:
           service_account_key: ${{ secrets.GCP_SA_KEY_STG }}
-          project_id: stage-413302 # Adjusted for consistency
-      
+          project_id: stage-413302
       - name: Configure gcloud CLI (Production)
         if: github.ref == 'refs/heads/main'
         run: gcloud config set project micro-harmony-413302
-      
       - name: Configure gcloud CLI (Staging)
         if: github.ref == 'refs/heads/develop'
         run: gcloud config set project stage-413302
-      
       - name: Deploy to Google App Engine (Production)
         if: github.ref == 'refs/heads/main'
         run: gcloud app deploy app.yaml --quiet
-      
       - name: Deploy to Google App Engine (Staging)
         if: github.ref == 'refs/heads/develop'
         run: gcloud app deploy app.yaml --quiet
-      
       - name: Run Alembic migrations (Production)
         if: github.ref == 'refs/heads/main'
         run: alembic upgrade head
         env:
           DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-      
       - name: Run Alembic migrations (Staging)
         if: github.ref == 'refs/heads/develop'
         run: alembic upgrade head
