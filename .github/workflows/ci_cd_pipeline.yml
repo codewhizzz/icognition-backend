@@ -22,12 +22,6 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Set DATABASE_URL for testing (staging)
-        if: github.ref == 'refs/heads/develop'
-        run: echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
-      - name: Set DATABASE_URL for testing (production)
-        if: github.ref == 'refs/heads/main'
-        run: echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_ENV
       - name: Run tests
         run: pytest
 
@@ -40,49 +34,22 @@ jobs:
       - name: Set up Python
         uses: actions/setup-python@v3
         with:
-          python-version: '3.8'
+          python-version: '3.10'  # Align with testing for consistency
       - name: Install dependencies
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Set environment for staging
-        if: github.ref == 'refs/heads/develop'
-        run: echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-      - name: Set environment for production
-        if: github.ref == 'refs/heads/main'
-        run: echo "ENVIRONMENT=production" >> $GITHUB_ENV
-      - name: Authenticate with Google Cloud (Production)
-        if: github.ref == 'refs/heads/main'
+      - name: Authenticate with Google Cloud
         uses: google-github-actions/setup-gcloud@v0
         with:
-          service_account_key: ${{ secrets.GCP_SA_KEY_PROD }}
-          project_id: micro-harmony-413302
-      - name: Authenticate with Google Cloud (Staging)
-        if: github.ref == 'refs/heads/develop'
-        uses: google-github-actions/setup-gcloud@v0
-        with:
-          service_account_key: ${{ secrets.GCP_SA_KEY_STG }}
-          project_id: stage-413302
-      - name: Configure gcloud CLI (Production)
-        if: github.ref == 'refs/heads/main'
-        run: gcloud config set project micro-harmony-413302
-      - name: Configure gcloud CLI (Staging)
-        if: github.ref == 'refs/heads/develop'
-        run: gcloud config set project stage-413302
-      - name: Deploy to Google App Engine (Production)
-        if: github.ref == 'refs/heads/main'
+          service_account_key: ${{ secrets.GCP_SA_KEY_${{ github.ref == 'refs/heads/main' && 'PROD' || 'STG' }} }}  # Dynamic key selection
+          project_id: ${{ github.ref == 'refs/heads/main' && 'micro-harmony-413302' || 'stage-413302' }}  # Dynamic project ID
+      - name: Configure gcloud CLI (optional, might not be needed)
+        run: gcloud config set project ${{ github.ref == 'refs/heads/main' && 'micro-harmony-413302' || 'stage-413302' }}  # Dynamic project ID
+      - name: Deploy to Google App Engine
         run: gcloud app deploy app.yaml --quiet
-      - name: Deploy to Google App Engine (Staging)
-        if: github.ref == 'refs/heads/develop'
-        run: gcloud app deploy app.yaml --quiet
-      - name: Run Alembic migrations (Production)
-        if: github.ref == 'refs/heads/main'
+      - name: Run Alembic migrations
         run: alembic upgrade head
         env:
-          DATABASE_URL: ${{ secrets.PRODUCTION_DATABASE_URL }}
-      - name: Run Alembic migrations (Staging)
-        if: github.ref == 'refs/heads/develop'
-        run: alembic upgrade head
-        env:
-          DATABASE_URL: ${{ secrets.STAGING_DATABASE_URL }}
+          DATABASE_URL: ${{ secrets.DATABASE_URL_${{ github.ref == 'refs/heads/main' && 'PRODUCTION' || 'STAGING' }} }}  # Dynamic DATABASE_URL
 
