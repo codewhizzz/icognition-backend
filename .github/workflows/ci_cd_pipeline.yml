@@ -64,8 +64,8 @@ jobs:
         run: echo "DATABASE_URL=${{ needs.setup-environment-variables.outputs.database_url }}" >> $GITHUB_ENV
       - name: Set LOCAL_PSQL for testing
         run: echo "LOCAL_PSQL=${{ needs.setup-environment-variables.outputs.database_url }}" >> $GITHUB_ENV
-      - name: Run tests
-        run: pytest
+      - name: Run tests excluding tests/data/ directory
+        run: pytest --ignore=tests/data/
 
   deploy:
     needs: test
