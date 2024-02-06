@@ -77,6 +77,7 @@ jobs:
       - name: Run tests excluding tests/data/ directory
         run: pytest --ignore=tests/data/
 
+
   deploy:
     needs: test
     runs-on: ubuntu-latest
