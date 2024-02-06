@@ -61,9 +61,15 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Print DATABASE_URL for debugging
-        run: echo "DATABASE_URL is ${{ needs.setup-environment-variables.outputs.database_url }}"
+        run: echo "DATABASE_URL is set"
       - name: Create mock tests/data directory
-        run: mkdir -p tests/data && touch tests/data/dummy
+        run: |
+          mkdir -p tests/data
+          touch tests/data/dummy
+      - name: Set DATABASE_URL for testing
+        run: echo "DATABASE_URL=${{ needs.setup-environment-variables.outputs.database_url }}" >> $GITHUB_ENV
+      - name: Set LOCAL_PSQL for testing
+        run: echo "LOCAL_PSQL=${{ needs.setup-environment-variables.outputs.database_url }}" >> $GITHUB_ENV
       - name: Run tests excluding tests/data/ directory
         run: pytest --ignore=tests/data/
 
