@@ -32,6 +32,21 @@ jobs:
         run: |
           pytest
 
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Set environment for staging
+        if: github.ref == 'refs/heads/develop'
+        run: echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+      - name: Set environment for production
+        if: github.ref == 'refs/heads/main'
+        run: echo "ENVIRONMENT=production" >> $GITHUB_ENV
+      - name: Set DATABASE_URL for tests
+        run: echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
+
+
   deploy:
     needs: test  # Only proceed with deployment if tests pass
     runs-on: ubuntu-latest
