@@ -11,7 +11,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       environment: ${{ steps.set-env.outputs.environment }}
-      database_url: ${{ steps.set-db-url.outputs.database_url }}
       gcp_sa_key: ${{ steps.set-gcp-key.outputs.gcp_sa_key }}
       project_id: ${{ steps.set-project-id.outputs.project_id }}
     steps:
@@ -21,13 +20,6 @@ jobs:
             echo "::set-output name=environment::staging"
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
             echo "::set-output name=environment::production"
-          fi
-      - id: set-db-url
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            echo "::set-output name=database_url::${{ secrets.STAGING_DATABASE_URL }}"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "::set-output name=database_url::${{ secrets.PRODUCTION_DATABASE_URL }}"
           fi
       - id: set-gcp-key
         run: |
@@ -52,16 +44,17 @@ jobs:
         python-version: ['3.10']
     steps:
       - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
+      - name: Set DATABASE_URL for testing
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          echo "DATABASE_URL=${{ github.ref == 'refs/heads/develop' && secrets.STAGING_DATABASE_URL || secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_ENV
+      - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
       - name: Print DATABASE_URL for debugging
-        run: echo "DATABASE_URL is ${{ needs.setup-environment-variables.outputs.database_url }}"
+        run: echo "DATABASE_URL is $DATABASE_URL"
       - name: Create mock tests/data directory
         run: mkdir -p tests/data && touch tests/data/dummy
       - name: Run tests excluding tests/data/ directory
@@ -77,9 +70,7 @@ jobs:
         with:
           python-version: '3.8'
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
       - name: Authenticate with Google Cloud
         uses: google-github-actions/setup-gcloud@v0
         with:
@@ -92,5 +83,5 @@ jobs:
       - name: Run Alembic migrations
         run: alembic upgrade head
         env:
-          DATABASE_URL: ${{ needs.setup-environment-variables.outputs.database_url }}
+          DATABASE_URL: ${{ github.ref == 'refs/heads/develop' && secrets.STAGING_DATABASE_URL || secrets.PRODUCTION_DATABASE_URL }}
 
