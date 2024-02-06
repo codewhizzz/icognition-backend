@@ -61,7 +61,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Print DATABASE_URL for debugging
-        run: echo "DATABASE_URL=${{ needs.setup-environment-variables.outputs.database_url }}"
+        run: echo "DATABASE_URL is set"
       - name: Create mock tests/data directory
         run: |
           mkdir -p tests/data
