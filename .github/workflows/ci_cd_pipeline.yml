@@ -60,13 +60,14 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Set DATABASE_URL based on branch
+      - name: Set DATABASE_URL for testing
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
             echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
           elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_ENV
           fi
+          
         shell: bash
       - name: Print DATABASE_URL for debugging
         run: echo "DATABASE_URL is $DATABASE_URL"
