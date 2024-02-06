@@ -68,22 +68,22 @@ jobs:
         uses: google-github-actions/setup-gcloud@v0
         with:
           service_account_key: ${{ secrets.GCP_SA_KEY_PROD }}
-          project_id: ${{ secrets.micro-harmony-413302 }} # Adjusted for consistency
+          project_id: micro-harmony-413302 # Adjusted for consistency
       
       - name: Authenticate with Google Cloud (Staging)
         if: github.ref == 'refs/heads/develop'
         uses: google-github-actions/setup-gcloud@v0
         with:
           service_account_key: ${{ secrets.GCP_SA_KEY_STG }}
-          project_id: ${{ secrets.stage-413302 }} # Adjusted for consistency
+          project_id: stage-413302 # Adjusted for consistency
       
       - name: Configure gcloud CLI (Production)
         if: github.ref == 'refs/heads/main'
-        run: gcloud config set project ${{ secrets.micro-harmony-413302 }}
+        run: gcloud config set project micro-harmony-413302
       
       - name: Configure gcloud CLI (Staging)
         if: github.ref == 'refs/heads/develop'
-        run: gcloud config set project ${{ secrets.stage-413302 }}
+        run: gcloud config set project stage-413302
       
       - name: Deploy to Google App Engine (Production)
         if: github.ref == 'refs/heads/main'
