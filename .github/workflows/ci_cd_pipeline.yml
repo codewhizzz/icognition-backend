@@ -3,8 +3,8 @@ name: CI/CD Pipeline for FastAPI Application
 on:
   push:
     branches:
-      - main  # Trigger deployment to production on pushes to 'main'
-      - develop  # Trigger deployment to staging on pushes to 'develop'
+      - main
+      - develop
 
 jobs:
   setup-environment-variables:
@@ -12,6 +12,8 @@ jobs:
     outputs:
       environment: ${{ steps.set-env.outputs.environment }}
       database_url: ${{ steps.set-db-url.outputs.database_url }}
+      gcp_sa_key: ${{ steps.set-gcp-key.outputs.gcp_sa_key }}
+      project_id: ${{ steps.set-project-id.outputs.project_id }}
     steps:
       - id: set-env
         run: |
@@ -26,6 +28,20 @@ jobs:
             echo "::set-output name=database_url::${{ secrets.STAGING_DATABASE_URL }}"
           elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
             echo "::set-output name=database_url::${{ secrets.PRODUCTION_DATABASE_URL }}"
+          fi
+      - id: set-gcp-key
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "::set-output name=gcp_sa_key::${{ secrets.GCP_SA_KEY_STG }}"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "::set-output name=gcp_sa_key::${{ secrets.GCP_SA_KEY_PROD }}"
+          fi
+      - id: set-project-id
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "::set-output name=project_id::stage-413302"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "::set-output name=project_id::micro-harmony-413302"
           fi
 
   test:
@@ -47,9 +63,7 @@ jobs:
       - name: Set DATABASE_URL for testing
         run: echo "DATABASE_URL=${{ needs.setup-environment-variables.outputs.database_url }}" >> $GITHUB_ENV
       - name: Run tests
-        run: |
-          pytest
-          echo "Tests completed for environment: ${{ needs.setup-environment-variables.outputs.environment }}"
+        run: pytest
 
   deploy:
     needs: test
@@ -65,20 +79,16 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Authenticate with Google Cloud
-        uses: google-github-actions/setup-gcloud@latest  # Using the latest version
+        uses: google-github-actions/setup-gcloud@v0
         with:
-          service_account_key: ${{ secrets['GCP_SA_KEY_' + needs.setup-environment-variables.outputs.environment | upper] }}
-          project_id: ${{ needs.setup-environment-variables.outputs.environment == 'staging' && 'stage-413302' || 'micro-harmony-413302' }}
+          service_account_key: ${{ needs.setup-environment-variables.outputs.gcp_sa_key }}
+          project_id: ${{ needs.setup-environment-variables.outputs.project_id }}
       - name: Configure gcloud CLI
-        run: gcloud config set project ${{ needs.setup-environment-variables.outputs.environment == 'staging' && 'stage-413302' || 'micro-harmony-413302' }}
+        run: gcloud config set project ${{ needs.setup-environment-variables.outputs.project_id }}
       - name: Deploy to Google App Engine
-        run: |
-          gcloud app deploy app.yaml --quiet
-          echo "Deployed to ${{ needs.setup-environment-variables.outputs.environment }} environment"
+        run: gcloud app deploy app.yaml --quiet
       - name: Run Alembic migrations
-        run: |
-          alembic upgrade head
-          echo "Alembic migrations completed for ${{ needs.setup-environment-variables.outputs.environment }} environment"
+        run: alembic upgrade head
         env:
           DATABASE_URL: ${{ needs.setup-environment-variables.outputs.database_url }}
 
