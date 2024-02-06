@@ -6,11 +6,6 @@ on:
       - main
       - develop
 
-    - name: Create mock tests/data directory
-      run: |
-        mkdir -p tests/data
-        touch tests/data/dummy
-
 jobs:
   setup-environment-variables:
     runs-on: ubuntu-latest
@@ -66,7 +61,11 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Print DATABASE_URL for debugging
-        run: echo "DATABASE_URL=${{ env.DATABASE_URL }}"
+        run: echo "DATABASE_URL=${{ needs.setup-environment-variables.outputs.database_url }}"
+      - name: Create mock tests/data directory
+        run: |
+          mkdir -p tests/data
+          touch tests/data/dummy
       - name: Set DATABASE_URL for testing
         run: echo "DATABASE_URL=${{ needs.setup-environment-variables.outputs.database_url }}" >> $GITHUB_ENV
       - name: Set LOCAL_PSQL for testing
