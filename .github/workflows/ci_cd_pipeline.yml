@@ -25,27 +25,17 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      # Removed LOCAL_PSQL as it's not necessary for the CI environment
-      # Tests should use STAGING_DATABASE_URL or PRODUCTION_DATABASE_URL based on the environment
-      
-      - name: Run tests
-        run: |
-          pytest
-
-
-jobs:
-  deploy:
-    runs-on: ubuntu-latest
-    steps:
-      - name: Set environment for staging
+      # Dynamically set DATABASE_URL for tests based on the branch
+      - name: Set DATABASE_URL for testing (staging)
         if: github.ref == 'refs/heads/develop'
-        run: echo "ENVIRONMENT=staging" >> $GITHUB_ENV
-      - name: Set environment for production
-        if: github.ref == 'refs/heads/main'
-        run: echo "ENVIRONMENT=production" >> $GITHUB_ENV
-      - name: Set DATABASE_URL for tests
         run: echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
 
+      - name: Set DATABASE_URL for testing (production)
+        if: github.ref == 'refs/heads/main'
+        run: echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_ENV
+
+      - name: Run tests
+        run: pytest
 
   deploy:
     needs: test  # Only proceed with deployment if tests pass
@@ -64,13 +54,14 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
 
-      - name: Set environment variable for Production
-        if: github.ref == 'refs/heads/main'
-        run: echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_ENV
-      
-      - name: Set environment variable for Staging
+      # Set ENVIRONMENT variable based on the branch
+      - name: Set environment for staging
         if: github.ref == 'refs/heads/develop'
-        run: echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
+        run: echo "ENVIRONMENT=staging" >> $GITHUB_ENV
+
+      - name: Set environment for production
+        if: github.ref == 'refs/heads/main'
+        run: echo "ENVIRONMENT=production" >> $GITHUB_ENV
 
       - name: Authenticate with Google Cloud (Production)
         if: github.ref == 'refs/heads/main'
