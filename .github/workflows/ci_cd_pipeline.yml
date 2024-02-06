@@ -15,7 +15,34 @@ jobs:
       gcp_sa_key: ${{ steps.set-gcp-key.outputs.gcp_sa_key }}
       project_id: ${{ steps.set-project-id.outputs.project_id }}
     steps:
-      # Your existing setup steps here
+      - id: set-env
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "::set-output name=environment::staging"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "::set-output name=environment::production"
+          fi
+      - id: set-db-url
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "::set-output name=database_url::${{ secrets.STAGING_DATABASE_URL }}"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "::set-output name=database_url::${{ secrets.PRODUCTION_DATABASE_URL }}"
+          fi
+      - id: set-gcp-key
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "::set-output name=gcp_sa_key::${{ secrets.GCP_SA_KEY_STG }}"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "::set-output name=gcp_sa_key::${{ secrets.GCP_SA_KEY_PROD }}"
+          fi
+      - id: set-project-id
+        run: |
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "::set-output name=project_id::stage-413302"
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "::set-output name=project_id::micro-harmony-413302"
+          fi
 
   test:
     needs: setup-environment-variables
