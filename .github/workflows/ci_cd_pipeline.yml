@@ -44,7 +44,7 @@ jobs:
             echo "::set-output name=project_id::micro-harmony-413302"
           fi
 
-test:
+  test:
     needs: setup-environment-variables
     runs-on: ubuntu-latest
     strategy:
@@ -77,8 +77,7 @@ test:
       - name: Run tests excluding tests/data/ directory
         run: pytest --ignore=tests/data/
 
-
-
+  # Your deploy job...
   deploy:
     needs: test
     runs-on: ubuntu-latest
@@ -105,5 +104,4 @@ test:
         run: alembic upgrade head
         env:
           DATABASE_URL: ${{ needs.setup-environment-variables.outputs.database_url }}
-
 
