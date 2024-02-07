@@ -1,12 +1,12 @@
 import datetime
 import sys
 import logging
-import os
 from app import html_parser
 from app.models import Bookmark, Entity, Concept, Page, Document
 from app.together_api_client import InclusiveTemplate, TogetherMixtralClient
 from sqlalchemy import select, delete, create_engine, and_
 from sqlalchemy.orm import Session
+import os
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -14,6 +14,19 @@ logging.basicConfig(
     level=logging.DEBUG,
     datefmt="%Y-%m-%d %H:%M:%S",
 )
+
+# Dynamically setting DATABASE_URL based on the environment variable
+database_url = os.getenv('DATABASE_URL')
+if not database_url:
+    raise ValueError("DATABASE_URL is not set. Please ensure the environment variable is configured.")
+
+engine = create_engine(database_url, client_encoding='utf8')
+
+# The rest of your app_logic.py remains unchanged
+
+# Ensure to replace 'your_test_database_url_here' in the conftest.py fixture
+# with the actual test database URL you intend to use.
+
 
 # Determine the database_url based on the ENVIRONMENT variable
 if os.environ.get("ENVIRONMENT") == "staging":
