@@ -1,12 +1,12 @@
 import datetime
 import sys
 import logging
+import os
 from app import html_parser
 from app.models import Bookmark, Entity, Concept, Page, Document
 from app.together_api_client import InclusiveTemplate, TogetherMixtralClient
-from sqlalchemy import select, delete, create_engine, and_, Integer, String, func
+from sqlalchemy import select, delete, create_engine, and_
 from sqlalchemy.orm import Session
-import os  # Import os to use os.getenv()
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -15,12 +15,29 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-# Use DATABASE_URL if LOCAL_PSQL isn't set. Adjust this line to use os.getenv()
-database_url = os.getenv('LOCAL_PSQL', default=os.getenv('DATABASE_URL'))
-engine = create_engine(database_url, client_encoding='utf8')  # Updated line to use database_url
+# Dynamically setting DATABASE_URL based on the environment
+environment = os.environ.get("ENVIRONMENT")
+if environment == "staging":
+    database_url = os.getenv('STAGING_DATABASE_URL')
+elif environment == "production":
+    database_url = os.getenv('PRODUCTION_DATABASE_URL')
+else:
+    database_url = os.getenv('LOCAL_PSQL', default=os.getenv('DATABASE_URL'))
+
+# Verify database_url Value
+if not database_url:
+    raise ValueError("DATABASE_URL is not set correctly.")
+else:
+    print(f"Using DATABASE_URL: {database_url}")
+
+engine = create_engine(database_url, client_encoding='utf8')
 
 mixtralClient = TogetherMixtralClient()
 inclusiveTemplate = InclusiveTemplate()
+
+
+
+# Your existing functions follow...
 
 def delete_bookmark_and_associate_records(bookmark_id) -> None:
     """
