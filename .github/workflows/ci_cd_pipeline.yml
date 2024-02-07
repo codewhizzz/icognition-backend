@@ -6,12 +6,6 @@ on:
       - main
       - develop
 
-env:
-  ENVIRONMENT: ${{ github.ref == 'refs/heads/develop' && 'staging' || 'production' }}
-  DATABASE_URL: ${{ github.ref == 'refs/heads/develop' && secrets.STAGING_DATABASE_URL || secrets.PRODUCTION_DATABASE_URL }}
-  GCP_SA_KEY: ${{ github.ref == 'refs/heads/develop' && secrets.GCP_SA_KEY_STG || secrets.GCP_SA_KEY_PROD }}
-  PROJECT_ID: ${{ github.ref == 'refs/heads/develop' && 'stage-413302' || 'micro-harmony-413302' }}
-
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -24,16 +18,29 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
+
       - name: Install dependencies
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
+      # Dynamically set DATABASE_URL based on the branch
+      - name: Set DATABASE_URL for testing
         run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+            echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
+          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+            echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_ENV
+          fi
+
       - name: Print DATABASE_URL for debugging
-        run: echo "DATABASE_URL is $DATABASE_URL"
+        run: echo "Using DATABASE_URL: $DATABASE_URL"
+
       - name: Create mock tests/data directory
         run: mkdir -p tests/data && touch tests/data/dummy.txt
+
       - name: Run tests excluding tests/data/ directory
         run: pytest --ignore=tests/data/
+        env:
+          DATABASE_URL: ${{ env.DATABASE_URL }}
 
   deploy:
     needs: test
@@ -44,21 +51,24 @@ jobs:
         uses: actions/setup-python@v2
         with:
           python-version: '3.8'
+
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+
       - name: Authenticate with Google Cloud
-        uses: google-github-actions/setup-gcloud@latest
+        uses: google-github-actions/setup-gcloud@v0
         with:
-          service_account_key: ${{ env.GCP_SA_KEY }}
-          project_id: ${{ env.PROJECT_ID }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}
+          project_id: ${{ secrets.GCP_PROJECT_ID }}
+
       - name: Configure gcloud CLI
-        run: gcloud config set project $PROJECT_ID
+        run: gcloud config set project ${{ secrets.GCP_PROJECT_ID }}
+
       - name: Deploy to Google App Engine
         run: gcloud app deploy app.yaml --quiet
+
       - name: Run Alembic migrations
+        run: alembic upgrade head
         env:
           DATABASE_URL: ${{ env.DATABASE_URL }}
-        run: alembic upgrade head
 
