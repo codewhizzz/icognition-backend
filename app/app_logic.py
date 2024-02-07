@@ -15,29 +15,27 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-# Dynamically setting DATABASE_URL based on the environment
-environment = os.environ.get("ENVIRONMENT")
-if environment == "staging":
+# Determine the database_url based on the ENVIRONMENT variable
+if os.environ.get("ENVIRONMENT") == "staging":
     database_url = os.getenv('STAGING_DATABASE_URL')
-elif environment == "production":
+elif os.environ.get("ENVIRONMENT") == "production":
     database_url = os.getenv('PRODUCTION_DATABASE_URL')
 else:
-    database_url = os.getenv('LOCAL_PSQL', default=os.getenv('DATABASE_URL'))
+    raise ValueError("ENVIRONMENT variable is not set to 'staging' or 'production'.")
 
-# Verify database_url Value
+# Ensure the database_url is set
 if not database_url:
-    raise ValueError("DATABASE_URL is not set correctly.")
-else:
-    print(f"Using DATABASE_URL: {database_url}")
+    raise ValueError("DATABASE_URL is not set.")
+
+print(f"Database URL: {database_url}")
 
 engine = create_engine(database_url, client_encoding='utf8')
 
+# Initialize the TogetherMixtralClient and InclusiveTemplate instances
 mixtralClient = TogetherMixtralClient()
 inclusiveTemplate = InclusiveTemplate()
 
 
-
-# Your existing functions follow...
 
 def delete_bookmark_and_associate_records(bookmark_id) -> None:
     """

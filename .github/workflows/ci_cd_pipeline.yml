@@ -10,39 +10,10 @@ jobs:
   setup-environment-variables:
     runs-on: ubuntu-latest
     outputs:
-      environment: ${{ steps.set-env.outputs.environment }}
-      database_url: ${{ steps.set-db-url.outputs.database_url }}
-      gcp_sa_key: ${{ steps.set-gcp-key.outputs.gcp_sa_key }}
-      project_id: ${{ steps.set-project-id.outputs.project_id }}
-    steps:
-      - id: set-env
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            echo "::set-output name=environment::staging"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "::set-output name=environment::production"
-          fi
-      - id: set-db-url
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            echo "::set-output name=database_url::${{ secrets.STAGING_DATABASE_URL }}"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "::set-output name=database_url::${{ secrets.PRODUCTION_DATABASE_URL }}"
-          fi
-      - id: set-gcp-key
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            echo "::set-output name=gcp_sa_key::${{ secrets.GCP_SA_KEY_STG }}"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "::set-output name=gcp_sa_key::${{ secrets.GCP_SA_KEY_PROD }}"
-          fi
-      - id: set-project-id
-        run: |
-          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
-            echo "::set-output name=project_id::stage-413302"
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
-            echo "::set-output name=project_id::micro-harmony-413302"
-          fi
+      environment: ${{ github.ref == 'refs/heads/develop' && 'staging' || 'production' }}
+      database_url: ${{ github.ref == 'refs/heads/develop' && secrets.STAGING_DATABASE_URL || secrets.PRODUCTION_DATABASE_URL }}
+      gcp_sa_key: ${{ github.ref == 'refs/heads/develop' && secrets.GCP_SA_KEY_STG || secrets.GCP_SA_KEY_PROD }}
+      project_id: ${{ github.ref == 'refs/heads/develop' && 'stage-413302' || 'micro-harmony-413302' }}
 
   test:
     needs: setup-environment-variables
@@ -52,17 +23,12 @@ jobs:
         python-version: ['3.10']
     steps:
       - uses: actions/checkout@v3
-      - name: Set environment variable for the database URL
-        run: |
-          echo "ENVIRONMENT=${{ needs.setup-environment-variables.outputs.environment }}" >> $GITHUB_ENV
-      - name: Set up Python ${{ matrix.python-version }}
+      - name: Set up Python
         uses: actions/setup-python@v3
         with:
           python-version: ${{ matrix.python-version }}
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
       - name: Print DATABASE_URL for debugging
         run: echo "DATABASE_URL is ${{ needs.setup-environment-variables.outputs.database_url }}"
       - name: Create mock tests/data directory
@@ -80,9 +46,7 @@ jobs:
         with:
           python-version: '3.8'
       - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
+        run: python -m pip install --upgrade pip && pip install -r requirements.txt
       - name: Authenticate with Google Cloud
         uses: google-github-actions/setup-gcloud@v0
         with:
