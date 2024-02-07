@@ -47,12 +47,12 @@ jobs:
         run: pytest --ignore=tests/data/
 
   deploy:
-    needs: test
+    needs: setup-and-test  # Corrected to match the actual job name
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v2  # Keep version consistent
       - name: Set up Python
-        uses: actions/setup-python@v3
+        uses: actions/setup-python@v2  # Keep version consistent
         with:
           python-version: '3.8'
       - name: Install dependencies
@@ -62,14 +62,18 @@ jobs:
       - name: Authenticate with Google Cloud
         uses: google-github-actions/setup-gcloud@v0
         with:
-          service_account_key: ${{ needs.setup-environment-variables.outputs.gcp_sa_key }}
-          project_id: ${{ needs.setup-environment-variables.outputs.project_id }}
+          service_account_key: ${{ secrets.GCP_SA_KEY }}  # Ensure this is set in your GitHub Secrets
+          project_id: ${{ needs.setup-environment-variables.outputs.project_id }}  # Ensure this is set in your GitHub Secrets
       - name: Configure gcloud CLI
-        run: gcloud config set project ${{ needs.setup-environment-variables.outputs.project_id }}
+        run: gcloud config set project ${{ needs.setup-environment-variables.outputs.project_id}}
       - name: Deploy to Google App Engine
         run: gcloud app deploy app.yaml --quiet
       - name: Run Alembic migrations
-        run: alembic upgrade head
+        run: |
+          if [ "$ENVIRONMENT" == "production" ]; then
+            alembic upgrade head
+          else
+            echo "Skipping migrations for non-production environments."
         env:
-          DATABASE_URL: ${{ needs.setup-environment-variables.outputs.database_url }}
+          DATABASE_URL: $DATABASE_URL  # Use directly set variable
 
