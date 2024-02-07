@@ -14,20 +14,22 @@ jobs:
         python-version: ['3.10']
     steps:
       - uses: actions/checkout@v2
+      
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: ${{ matrix.python-version }}
-
+          
       - name: Install dependencies
-        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      # Dynamically set DATABASE_URL based on the branch
       - name: Set DATABASE_URL for testing
         run: |
-          if [ "${{ github.ref }}" == "refs/heads/develop" ]; then
+          if [[ "${{ github.ref }}" == "refs/heads/develop" ]]; then
             echo "DATABASE_URL=${{ secrets.STAGING_DATABASE_URL }}" >> $GITHUB_ENV
-          elif [ "${{ github.ref }}" == "refs/heads/main" ]; then
+          elif [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "DATABASE_URL=${{ secrets.PRODUCTION_DATABASE_URL }}" >> $GITHUB_ENV
           fi
 
@@ -39,21 +41,22 @@ jobs:
 
       - name: Run tests excluding tests/data/ directory
         run: pytest --ignore=tests/data/
-        env:
-          DATABASE_URL: ${{ env.DATABASE_URL }}
 
   deploy:
     needs: test
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v2
+
       - name: Set up Python
         uses: actions/setup-python@v2
         with:
           python-version: '3.8'
-
+          
       - name: Install dependencies
-        run: python -m pip install --upgrade pip && pip install -r requirements.txt
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
       - name: Authenticate with Google Cloud
         uses: google-github-actions/setup-gcloud@v0
