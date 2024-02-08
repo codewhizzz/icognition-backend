@@ -1,12 +1,13 @@
-import datetime
-import sys
-import logging
-from app import html_parser
-from app.models import Bookmark, Entity, Concept, Page, Document
-from app.together_api_client import InclusiveTemplate, TogetherMixtralClient
-from sqlalchemy import select, delete, create_engine, and_
-from sqlalchemy.orm import Session
 import os
+import datetime
+import logging
+import sys
+from sqlalchemy import create_engine, select, delete, and_
+from sqlalchemy.orm import Session
+from sqlalchemy.engine.url import URL
+from app.models import Bookmark, Document, Entity, Concept
+from app.together_api_client import TogetherMixtralClient, InclusiveTemplate
+from app import html_parser
 
 logging.basicConfig(
     stream=sys.stdout,
@@ -15,34 +16,19 @@ logging.basicConfig(
     datefmt="%Y-%m-%d %H:%M:%S",
 )
 
-# Dynamically setting DATABASE_URL based on the environment variable
+# Retrieve DATABASE_URL from the environment variables
 database_url = os.getenv('DATABASE_URL')
 if not database_url:
     raise ValueError("DATABASE_URL is not set. Please ensure the environment variable is configured.")
 
-engine = create_engine(database_url, client_encoding='utf8')
+# Parse the database URL
+url = URL.create(database_url)
 
-# The rest of your app_logic.py remains unchanged
-
-# Ensure to replace 'your_test_database_url_here' in the conftest.py fixture
-# with the actual test database URL you intend to use.
-
-
-# Determine the database_url based on the ENVIRONMENT variable
-if os.environ.get("ENVIRONMENT") == "staging":
-    database_url = os.getenv('STAGING_DATABASE_URL')
-elif os.environ.get("ENVIRONMENT") == "production":
-    database_url = os.getenv('PRODUCTION_DATABASE_URL')
+# Conditionally add client_encoding for PostgreSQL
+if url.drivername.startswith('postgresql'):
+    engine = create_engine(database_url, client_encoding='utf8', echo=True, future=True)
 else:
-    raise ValueError("ENVIRONMENT variable is not set to 'staging' or 'production'.")
-
-# Ensure the database_url is set
-if not database_url:
-    raise ValueError("DATABASE_URL is not set.")
-
-print(f"Database URL: {database_url}")
-
-engine = create_engine(database_url, client_encoding='utf8')
+    engine = create_engine(database_url, echo=True, future=True)
 
 # Initialize the TogetherMixtralClient and InclusiveTemplate instances
 mixtralClient = TogetherMixtralClient()
