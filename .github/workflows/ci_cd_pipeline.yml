@@ -35,8 +35,14 @@ jobs:
             echo "::set-output name=skip_db_tests::false"
           fi
       
-      - name: Run tests excluding database dependent tests if DATABASE_URL is not set
-        run: pytest ${{ if steps.check_db_url.outputs.skip_db_tests == 'true' }} -k 'not requires_database_url' ${{ else }} --ignore=tests/data/ ${{ endif }}
+      - name: Run tests excluding database dependent tests
+        if: steps.check_db_url.outputs.skip_db_tests == 'true'
+        run: pytest -k 'not requires_database_url'
+      
+      - name: Run all tests if DATABASE_URL is set
+        if: steps.check_db_url.outputs.skip_db_tests == 'false'
+        run: pytest --ignore=tests/data/
+
 
   deploy:
 
