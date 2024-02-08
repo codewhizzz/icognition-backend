@@ -1,16 +1,15 @@
-# tests/conftest.py
+# conftest.py
+import pytest
 import os
+
+def pytest_configure(config):
+    if not os.getenv('DATABASE_URL'):
+        setattr(config.option, 'markexpr', 'not requires_database')
+
+# test_app.py
 import pytest
 
-@pytest.fixture(scope='session', autouse=True)
-def set_env_variables():
-    # Assuming these are your desired test environment settings
-    os.environ['ENVIRONMENT'] = 'staging'  # Or 'production', as needed
-    os.environ['DATABASE_URL'] = 'your_test_database_url_here'
-
-    yield  # Allows tests to run with these environment settings
-
-    # Optional: Clear or reset environment variables after tests complete
-    # os.environ.pop('ENVIRONMENT')
-    # os.environ.pop('DATABASE_URL')
+@pytest.mark.requires_database
+def test_function_that_requires_database():
+    # Your test code that requires DATABASE_URL
 
