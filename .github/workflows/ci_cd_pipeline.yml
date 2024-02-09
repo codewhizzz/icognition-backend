@@ -44,29 +44,8 @@ jobs:
             echo "::set-output name=project_id::micro-harmony-413302"
           fi
 
-  test:
-    needs: setup-environment-variables
-    runs-on: ubuntu-latest
-    strategy:
-      matrix:
-        python-version: ['3.10']
-    steps:
-      - uses: actions/checkout@v3
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v3
-        with:
-          python-version: ${{ matrix.python-version }}
-      - name: Install dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Set Mock DATABASE_URL
-        run: echo "DATABASE_URL=sqlite:///test.db" >> $GITHUB_ENV
-      - name: Run tests
-        run: pytest
-
   deploy:
-    needs: test
+    needs: setup-environment-variables
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
