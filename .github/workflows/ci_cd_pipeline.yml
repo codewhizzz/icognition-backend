@@ -77,5 +77,3 @@ jobs:
         run: alembic upgrade head
         env:
           DATABASE_URL: ${{ needs.setup-environment-variables.outputs.database_url }}
-
-
