@@ -1,15 +1,7 @@
-runtime: custom
-env: flex
+runtime: python39  # Specify the Python runtime
+entrypoint: gunicorn -b :$PORT main:app  # Replace 'main:app' with your application's entry point
 
-automatic_scaling:
-  min_num_instances: 1
-  max_num_instances: 2
-
-resources:
-  cpu: 1
-  memory_gb: 0.5
-  disk_size_gb: 10
-
-env_variables:
-  ENV_VAR_NAME: "value"
+handlers:
+- url: /.*
+  script: auto
 
