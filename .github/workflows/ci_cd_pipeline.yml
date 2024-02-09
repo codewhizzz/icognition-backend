@@ -44,7 +44,6 @@ jobs:
             echo "::set-output name=project_id::micro-harmony-413302"
           fi
 
-  jobs:
   deploy:
     needs: setup-environment-variables
     runs-on: ubuntu-latest
@@ -59,7 +58,7 @@ jobs:
           python -m pip install --upgrade pip
           pip install -r requirements.txt
       - name: Authenticate with Google Cloud
-        uses: google-github-actions/setup-gcloud@latest # Ensure to use the latest version
+        uses: google-github-actions/setup-gcloud@latest
         with:
           service_account_key: ${{ github.ref == 'refs/heads/main' && secrets.GCP_SA_KEY_PROD || github.ref == 'refs/heads/develop' && secrets.GCP_SA_KEY_STG }}
           project_id: ${{ needs.setup-environment-variables.outputs.project_id }}
@@ -75,5 +74,4 @@ jobs:
         run: alembic upgrade head
         env:
           DATABASE_URL: ${{ needs.setup-environment-variables.outputs.database_url }}
-
 
