@@ -60,11 +60,13 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
-      - name: Set Mock DATABASE_URL
-        run: echo "DATABASE_URL=sqlite:///test.db" >> $GITHUB_ENV
+      - name: Create tests/data directory
+        run: mkdir -p tests/data
+      - name: Print DATABASE_URL for debugging
+        run: echo "DATABASE_URL is ${{ needs.setup-environment-variables.outputs.database_url }}"
       - name: Run tests
-        run: pytest --ignore=tests/data/
-        
+        run: pytest
+
   deploy:
     needs: test
     runs-on: ubuntu-latest
